@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { Analytics } from '@vercel/analytics/react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -842,6 +843,7 @@ export default function App() {
           </Routes>
         </main>
         <Footer />
+        <Analytics />
       </div>
     </Router>
   );
