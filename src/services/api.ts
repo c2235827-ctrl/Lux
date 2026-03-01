@@ -96,16 +96,9 @@ export const fileToBase64 = (file: File): Promise<string> => {
 // Service to handle API calls with LocalStorage fallback
 export const apiService = {
   async getContent(): Promise<SiteContent> {
-    try {
-      const res = await fetch('/api/content');
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      localStorage.setItem('lg_content', JSON.stringify(data));
-      return data;
-    } catch {
-      const stored = localStorage.getItem('lg_content');
-      return stored ? JSON.parse(stored) : INITIAL_CONTENT;
-    }
+    const res = await fetch('/api/content', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch content');
+    return await res.json();
   },
 
   async updateContent(content: SiteContent) {
@@ -115,27 +108,15 @@ export const apiService = {
       body: JSON.stringify({ content })
     });
     if (!res.ok) throw new Error('Failed to update content');
-    await this.getContent();
   },
 
   async getReviews(type?: string, target_id?: number): Promise<Review[]> {
-    try {
-      const params = new URLSearchParams();
-      if (type) params.append('type', type);
-      if (target_id) params.append('target_id', target_id.toString());
-      const res = await fetch(`/api/reviews?${params}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      localStorage.setItem('lg_reviews', JSON.stringify(data));
-      return data;
-    } catch {
-      const stored = localStorage.getItem('lg_reviews');
-      const reviews: Review[] = stored ? JSON.parse(stored) : [];
-      if (type) {
-        return reviews.filter(r => r.type === type && (target_id ? r.target_id === target_id : true));
-      }
-      return reviews;
-    }
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (target_id) params.append('target_id', target_id.toString());
+    const res = await fetch(`/api/reviews?${params}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch reviews');
+    return await res.json();
   },
 
   async addReview(review: Omit<Review, 'id' | 'created_at'>) {
@@ -145,26 +126,13 @@ export const apiService = {
       body: JSON.stringify(review)
     });
     if (!res.ok) throw new Error('Failed to add review');
-    const data = await res.json();
-    await this.getReviews();
-    return data;
+    return await res.json();
   },
 
   async getServices(): Promise<Service[]> {
-    try {
-      const res = await fetch('/api/services');
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      localStorage.setItem('lg_services', JSON.stringify(data));
-      return data;
-    } catch {
-      const stored = localStorage.getItem('lg_services');
-      if (!stored) {
-        localStorage.setItem('lg_services', JSON.stringify(INITIAL_SERVICES));
-        return INITIAL_SERVICES;
-      }
-      return JSON.parse(stored);
-    }
+    const res = await fetch('/api/services', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch services');
+    return await res.json();
   },
 
   async addService(service: Omit<Service, 'id'>) {
@@ -174,48 +142,24 @@ export const apiService = {
       body: JSON.stringify({ ...service, price: Number(service.price), duration: Number(service.duration) })
     });
     if (!res.ok) throw new Error('Failed to add service');
-    const data = await res.json();
-    await this.getServices(); // Refresh local cache
-    return data;
+    return await res.json();
   },
 
   async deleteService(id: number) {
-    try {
-      const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      await this.getServices(); // Refresh local cache
-    } catch {
-      const services = await this.getServices();
-      localStorage.setItem('lg_services', JSON.stringify(services.filter(s => s.id !== id)));
-    }
+    const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete service');
   },
 
   async getStylists(): Promise<Stylist[]> {
-    try {
-      const res = await fetch('/api/stylists');
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      localStorage.setItem('lg_stylists', JSON.stringify(data));
-      return data;
-    } catch {
-      const stored = localStorage.getItem('lg_stylists');
-      if (!stored) {
-        localStorage.setItem('lg_stylists', JSON.stringify(INITIAL_STYLISTS));
-        return INITIAL_STYLISTS;
-      }
-      return JSON.parse(stored);
-    }
+    const res = await fetch('/api/stylists', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch stylists');
+    return await res.json();
   },
 
   async getStylistById(id: number): Promise<Stylist | undefined> {
-    try {
-      const res = await fetch(`/api/stylists/${id}`);
-      if (!res.ok) throw new Error();
-      return await res.json();
-    } catch {
-      const stylists = await this.getStylists();
-      return stylists.find(s => s.id === id);
-    }
+    const res = await fetch(`/api/stylists/${id}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch stylist');
+    return await res.json();
   },
 
   async addStylist(stylist: Omit<Stylist, 'id'>) {
@@ -225,33 +169,18 @@ export const apiService = {
       body: JSON.stringify(stylist)
     });
     if (!res.ok) throw new Error('Failed to add stylist');
-    const data = await res.json();
-    await this.getStylists(); // Refresh local cache
-    return data;
+    return await res.json();
   },
 
   async deleteStylist(id: number) {
-    try {
-      const res = await fetch(`/api/stylists/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      await this.getStylists(); // Refresh local cache
-    } catch {
-      const stylists = await this.getStylists();
-      localStorage.setItem('lg_stylists', JSON.stringify(stylists.filter(s => s.id !== id)));
-    }
+    const res = await fetch(`/api/stylists/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete stylist');
   },
 
   async getBookings(): Promise<Booking[]> {
-    try {
-      const res = await fetch('/api/bookings');
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      localStorage.setItem('lg_bookings', JSON.stringify(data));
-      return data;
-    } catch {
-      const stored = localStorage.getItem('lg_bookings');
-      return stored ? JSON.parse(stored) : [];
-    }
+    const res = await fetch('/api/bookings', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch bookings');
+    return await res.json();
   },
 
   async addBooking(booking: Omit<Booking, 'id' | 'status'>) {
@@ -261,72 +190,36 @@ export const apiService = {
       body: JSON.stringify(booking)
     });
     if (!res.ok) throw new Error('Failed to add booking');
-    const data = await res.json();
-    await this.getBookings(); // Refresh local cache
-    return data;
+    return await res.json();
   },
 
   async updateBookingStatus(id: number, status: string) {
-    try {
-      const res = await fetch(`/api/bookings/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!res.ok) throw new Error();
-      await this.getBookings(); // Refresh local cache
-    } catch {
-      const bookings = await this.getBookings();
-      const updated = bookings.map(b => b.id === id ? { ...b, status: status as any } : b);
-      localStorage.setItem('lg_bookings', JSON.stringify(updated));
-    }
+    const res = await fetch(`/api/bookings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error('Failed to update booking status');
   },
 
   async getGallery(): Promise<GalleryItem[]> {
-    try {
-      const res = await fetch('/api/gallery');
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      localStorage.setItem('lg_gallery', JSON.stringify(data));
-      return data;
-    } catch {
-      const stored = localStorage.getItem('lg_gallery');
-      if (!stored) {
-        localStorage.setItem('lg_gallery', JSON.stringify(INITIAL_GALLERY));
-        return INITIAL_GALLERY;
-      }
-      return JSON.parse(stored);
-    }
+    const res = await fetch('/api/gallery', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch gallery');
+    return await res.json();
   },
 
   async addGallery(item: Omit<GalleryItem, 'id'>) {
-    try {
-      const res = await fetch('/api/gallery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item)
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      await this.getGallery(); // Refresh local cache
-      return data;
-    } catch {
-      const items = await this.getGallery();
-      const newItem = { ...item, id: Date.now() };
-      const updated = [...items, newItem];
-      localStorage.setItem('lg_gallery', JSON.stringify(updated));
-      return newItem;
-    }
+    const res = await fetch('/api/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+    if (!res.ok) throw new Error('Failed to add gallery item');
+    return await res.json();
   },
 
   async deleteGallery(id: number) {
-    try {
-      const res = await fetch(`/api/gallery/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      await this.getGallery(); // Refresh local cache
-    } catch {
-      const items = await this.getGallery();
-      localStorage.setItem('lg_gallery', JSON.stringify(items.filter(i => i.id !== id)));
-    }
+    const res = await fetch(`/api/gallery/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete gallery item');
   }
 };
