@@ -765,10 +765,7 @@ const AdminDashboard = ({ siteContent, setSiteContent }: { siteContent: SiteCont
   };
 
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
-  const totalRevenue = confirmedBookings.reduce((acc, b) => {
-    const service = services.find(s => s.id === b.service_id);
-    return acc + (service?.price || 0);
-  }, 0);
+  const totalRevenue = confirmedBookings.reduce((acc, b) => acc + (b.service_price || 0), 0);
 
   if (loading) return <div className="pt-32 text-center">Loading dashboard...</div>;
 
@@ -823,7 +820,7 @@ const AdminDashboard = ({ siteContent, setSiteContent }: { siteContent: SiteCont
                     </td>
                     <td className="p-6">
                       <div className="text-sm">{booking.service_name}</div>
-                      <div className="text-xs text-emerald-600 font-bold">${service?.price || 0}</div>
+                      <div className="text-xs text-emerald-600 font-bold">${booking.service_price || 0}</div>
                     </td>
                     <td className="p-6 text-sm">{booking.stylist_name}</td>
                     <td className="p-6 text-sm">{new Date(booking.booking_date).toLocaleString()}</td>
@@ -1124,16 +1121,7 @@ const GalleryPage = () => {
     });
   }, []);
 
-  const defaultImages = [
-    "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&q=80&w=800"
-  ];
-
-  const displayImages = images.length > 0 ? images.map(i => i.image_url) : defaultImages;
+  const displayImages = images.map(i => i.image_url);
 
   if (loading) return <div className="pt-32 text-center font-serif italic">Loading portfolio...</div>;
 

@@ -34,6 +34,7 @@ export interface Booking {
   booking_date: string;
   status: 'pending' | 'confirmed' | 'cancelled';
   service_name?: string;
+  service_price?: number;
   stylist_name?: string;
 }
 

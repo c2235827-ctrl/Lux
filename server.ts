@@ -207,7 +207,7 @@ async function startServer() {
   // Bookings
   app.get('/api/bookings', (req, res) => {
     const bookings = db.prepare(`
-      SELECT b.*, s.name as service_name, st.name as stylist_name 
+      SELECT b.*, s.name as service_name, s.price as service_price, st.name as stylist_name 
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       JOIN stylists st ON b.stylist_id = st.id
