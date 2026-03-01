@@ -1,0 +1,235 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+// Types
+export interface Service {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  duration: number;
+  category: string;
+  image_url: string;
+}
+
+export interface Stylist {
+  id: number;
+  name: string;
+  bio: string;
+  specialty: string;
+  image_url: string;
+}
+
+export interface Booking {
+  id: number;
+  client_name: string;
+  client_email: string;
+  client_phone: string;
+  service_id: number;
+  stylist_id: number;
+  booking_date: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  service_name?: string;
+  stylist_name?: string;
+}
+
+export interface GalleryItem {
+  id: number;
+  title: string;
+  image_url: string;
+  category: string;
+}
+
+// Mock Data for initial fallback
+const INITIAL_SERVICES: Service[] = [
+  { id: 1, name: 'Classic Hair Braiding', description: 'Traditional braiding styles for all hair types.', price: 85, duration: 120, category: 'Hair', image_url: 'https://picsum.photos/seed/braids/400/300' },
+  { id: 2, name: 'Gel Manicure', description: 'Long-lasting gel polish with nail shaping.', price: 45, duration: 60, category: 'Nails', image_url: 'https://picsum.photos/seed/nails/400/300' },
+  { id: 3, name: 'HydraFacial', description: 'Deep cleansing and hydration treatment.', price: 120, duration: 45, category: 'Skin', image_url: 'https://picsum.photos/seed/facial/400/300' }
+];
+
+const INITIAL_STYLISTS: Stylist[] = [
+  { id: 1, name: 'Elena Vance', bio: 'Expert in intricate braiding and natural hair care.', specialty: 'Master Braider', image_url: 'https://picsum.photos/seed/stylist1/400/400' },
+  { id: 2, name: 'Marcus Chen', bio: 'Award-winning nail artist with 10 years experience.', specialty: 'Nail Art', image_url: 'https://picsum.photos/seed/stylist2/400/400' }
+];
+
+const INITIAL_GALLERY: GalleryItem[] = [
+  { id: 1, title: 'Elegant Braids', category: 'Hair', image_url: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800' },
+  { id: 2, title: 'Modern Nails', category: 'Nails', image_url: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=800' },
+  { id: 3, title: 'Skin Glow', category: 'Skin', image_url: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&q=80&w=800' }
+];
+
+// Service to handle API calls with LocalStorage fallback
+export const apiService = {
+  async getServices(): Promise<Service[]> {
+    try {
+      const res = await fetch('/api/services');
+      if (!res.ok) throw new Error();
+      return await res.json();
+    } catch {
+      const stored = localStorage.getItem('lg_services');
+      if (!stored) {
+        localStorage.setItem('lg_services', JSON.stringify(INITIAL_SERVICES));
+        return INITIAL_SERVICES;
+      }
+      return JSON.parse(stored);
+    }
+  },
+
+  async addService(service: Omit<Service, 'id'>) {
+    try {
+      const res = await fetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(service)
+      });
+      return await res.json();
+    } catch {
+      const services = await this.getServices();
+      const newService = { ...service, id: Date.now() };
+      localStorage.setItem('lg_services', JSON.stringify([...services, newService]));
+      return newService;
+    }
+  },
+
+  async deleteService(id: number) {
+    try {
+      await fetch(`/api/services/${id}`, { method: 'DELETE' });
+    } catch {
+      const services = await this.getServices();
+      localStorage.setItem('lg_services', JSON.stringify(services.filter(s => s.id !== id)));
+    }
+  },
+
+  async getStylists(): Promise<Stylist[]> {
+    try {
+      const res = await fetch('/api/stylists');
+      if (!res.ok) throw new Error();
+      return await res.json();
+    } catch {
+      const stored = localStorage.getItem('lg_stylists');
+      if (!stored) {
+        localStorage.setItem('lg_stylists', JSON.stringify(INITIAL_STYLISTS));
+        return INITIAL_STYLISTS;
+      }
+      return JSON.parse(stored);
+    }
+  },
+
+  async addStylist(stylist: Omit<Stylist, 'id'>) {
+    try {
+      const res = await fetch('/api/stylists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stylist)
+      });
+      return await res.json();
+    } catch {
+      const stylists = await this.getStylists();
+      const newStylist = { ...stylist, id: Date.now() };
+      localStorage.setItem('lg_stylists', JSON.stringify([...stylists, newStylist]));
+      return newStylist;
+    }
+  },
+
+  async deleteStylist(id: number) {
+    try {
+      await fetch(`/api/stylists/${id}`, { method: 'DELETE' });
+    } catch {
+      const stylists = await this.getStylists();
+      localStorage.setItem('lg_stylists', JSON.stringify(stylists.filter(s => s.id !== id)));
+    }
+  },
+
+  async getBookings(): Promise<Booking[]> {
+    try {
+      const res = await fetch('/api/bookings');
+      if (!res.ok) throw new Error();
+      return await res.json();
+    } catch {
+      const stored = localStorage.getItem('lg_bookings');
+      return stored ? JSON.parse(stored) : [];
+    }
+  },
+
+  async addBooking(booking: Omit<Booking, 'id' | 'status'>) {
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(booking)
+      });
+      return await res.json();
+    } catch {
+      const bookings = await this.getBookings();
+      const services = await this.getServices();
+      const stylists = await this.getStylists();
+      
+      const newBooking: Booking = { 
+        ...booking, 
+        id: Date.now(), 
+        status: 'pending',
+        service_name: services.find(s => s.id === Number(booking.service_id))?.name,
+        stylist_name: stylists.find(s => s.id === Number(booking.stylist_id))?.name
+      };
+      localStorage.setItem('lg_bookings', JSON.stringify([...bookings, newBooking]));
+      return newBooking;
+    }
+  },
+
+  async updateBookingStatus(id: number, status: string) {
+    try {
+      await fetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+    } catch {
+      const bookings = await this.getBookings();
+      localStorage.setItem('lg_bookings', JSON.stringify(bookings.map(b => b.id === id ? { ...b, status } : b)));
+    }
+  },
+
+  async getGallery(): Promise<GalleryItem[]> {
+    try {
+      const res = await fetch('/api/gallery');
+      if (!res.ok) throw new Error();
+      return await res.json();
+    } catch {
+      const stored = localStorage.getItem('lg_gallery');
+      if (!stored) {
+        localStorage.setItem('lg_gallery', JSON.stringify(INITIAL_GALLERY));
+        return INITIAL_GALLERY;
+      }
+      return JSON.parse(stored);
+    }
+  },
+
+  async addGallery(item: Omit<GalleryItem, 'id'>) {
+    try {
+      const res = await fetch('/api/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      });
+      return await res.json();
+    } catch {
+      const items = await this.getGallery();
+      const newItem = { ...item, id: Date.now() };
+      localStorage.setItem('lg_gallery', JSON.stringify([...items, newItem]));
+      return newItem;
+    }
+  },
+
+  async deleteGallery(id: number) {
+    try {
+      await fetch(`/api/gallery/${id}`, { method: 'DELETE' });
+    } catch {
+      const items = await this.getGallery();
+      localStorage.setItem('lg_gallery', JSON.stringify(items.filter(i => i.id !== id)));
+    }
+  }
+};

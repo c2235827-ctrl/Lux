@@ -20,58 +20,7 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-// Types
-interface Service {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  duration: number;
-  category: string;
-  image_url: string;
-}
-
-interface Stylist {
-  id: number;
-  name: string;
-  bio: string;
-  specialty: string;
-  image_url: string;
-}
-
-interface Booking {
-  id: number;
-  client_name: string;
-  client_email: string;
-  client_phone: string;
-  service_id: number;
-  stylist_id: number;
-  booking_date: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  service_name?: string;
-  stylist_name?: string;
-}
-
-interface GalleryItem {
-  id: number;
-  title: string;
-  image_url: string;
-  category: string;
-}
-
-interface GalleryItem {
-  id: number;
-  title: string;
-  image_url: string;
-  category: string;
-}
+import { apiService, cn, type Service, type Stylist, type Booking, type GalleryItem } from './services/api';
 
 // Components
 const Navbar = ({ isAdmin, setIsAdmin }: { isAdmin: boolean, setIsAdmin: (val: boolean) => void }) => {
@@ -198,12 +147,10 @@ const ServicesPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/services')
-      .then(res => res.json())
-      .then(data => {
-        setServices(data);
-        setLoading(false);
-      });
+    apiService.getServices().then(data => {
+      setServices(data);
+      setLoading(false);
+    });
   }, []);
 
   if (loading) return <div className="pt-32 text-center font-serif italic">Loading our catalog...</div>;
@@ -266,8 +213,8 @@ const BookingPage = () => {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/services').then(res => res.json()),
-      fetch('/api/stylists').then(res => res.json())
+      apiService.getServices(),
+      apiService.getStylists()
     ]).then(([sData, stData]) => {
       setServices(sData);
       setStylists(stData);
@@ -276,15 +223,9 @@ const BookingPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    });
-    if (res.ok) {
-      setSubmitted(true);
-      setTimeout(() => navigate('/'), 3000);
-    }
+    await apiService.addBooking(formData as any);
+    setSubmitted(true);
+    setTimeout(() => navigate('/'), 3000);
   };
 
   if (submitted) {
@@ -390,14 +331,26 @@ const AdminLogin = ({ setIsAdmin }: { setIsAdmin: (val: boolean) => void }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    });
-    const data = await res.json();
-    if (data.success) {
-      localStorage.setItem('adminToken', data.token);
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('adminToken', data.token);
+        setIsAdmin(true);
+        navigate('/admin');
+        return;
+      }
+    } catch (err) {
+      console.warn('API Login failed, checking local password for demo mode');
+    }
+
+    // Fallback for Vercel/Demo environments
+    if (password === 'admin123') {
+      localStorage.setItem('adminToken', 'demo-token');
       setIsAdmin(true);
       navigate('/admin');
     } else {
@@ -444,16 +397,16 @@ const AdminDashboard = () => {
   const [newGallery, setNewGallery] = useState({ title: '', image_url: '', category: 'Hair' });
 
   const fetchData = async () => {
-    const [bRes, sRes, stRes, gRes] = await Promise.all([
-      fetch('/api/bookings'),
-      fetch('/api/services'),
-      fetch('/api/stylists'),
-      fetch('/api/gallery')
+    const [bData, sData, stData, gData] = await Promise.all([
+      apiService.getBookings(),
+      apiService.getServices(),
+      apiService.getStylists(),
+      apiService.getGallery()
     ]);
-    setBookings(await bRes.json());
-    setServices(await sRes.json());
-    setStylists(await stRes.json());
-    setGallery(await gRes.json());
+    setBookings(bData);
+    setServices(sData);
+    setStylists(stData);
+    setGallery(gData);
     setLoading(false);
   };
 
@@ -462,62 +415,46 @@ const AdminDashboard = () => {
   }, []);
 
   const updateStatus = async (id: number, status: string) => {
-    await fetch(`/api/bookings/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
+    await apiService.updateBookingStatus(id, status);
     setBookings(bookings.map(b => b.id === id ? { ...b, status: status as any } : b));
   };
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('/api/services', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newService)
-    });
+    await apiService.addService(newService as any);
     setNewService({ name: '', description: '', price: '', duration: '', category: 'Hair', image_url: '' });
     fetchData();
   };
 
   const handleDeleteService = async (id: number) => {
     if(!confirm('Are you sure?')) return;
-    await fetch(`/api/services/${id}`, { method: 'DELETE' });
+    await apiService.deleteService(id);
     fetchData();
   };
 
   const handleAddStylist = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('/api/stylists', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newStylist)
-    });
+    await apiService.addStylist(newStylist as any);
     setNewStylist({ name: '', bio: '', specialty: '', image_url: '' });
     fetchData();
   };
 
   const handleDeleteStylist = async (id: number) => {
     if(!confirm('Are you sure?')) return;
-    await fetch(`/api/stylists/${id}`, { method: 'DELETE' });
+    await apiService.deleteStylist(id);
     fetchData();
   };
 
   const handleAddGallery = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('/api/gallery', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newGallery)
-    });
+    await apiService.addGallery(newGallery as any);
     setNewGallery({ title: '', image_url: '', category: 'Hair' });
     fetchData();
   };
 
   const handleDeleteGallery = async (id: number) => {
     if(!confirm('Are you sure?')) return;
-    await fetch(`/api/gallery/${id}`, { method: 'DELETE' });
+    await apiService.deleteGallery(id);
     fetchData();
   };
 
@@ -724,12 +661,10 @@ const GalleryPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/gallery')
-      .then(res => res.json())
-      .then(data => {
-        setImages(data);
-        setLoading(false);
-      });
+    apiService.getGallery().then(data => {
+      setImages(data);
+      setLoading(false);
+    });
   }, []);
 
   const defaultImages = [
