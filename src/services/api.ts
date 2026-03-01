@@ -109,16 +109,13 @@ export const apiService = {
   },
 
   async updateContent(content: SiteContent) {
-    try {
-      await fetch('/api/content', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
-      });
-      await this.getContent();
-    } catch {
-      localStorage.setItem('lg_content', JSON.stringify(content));
-    }
+    const res = await fetch('/api/content', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    });
+    if (!res.ok) throw new Error('Failed to update content');
+    await this.getContent();
   },
 
   async getReviews(type?: string, target_id?: number): Promise<Review[]> {
@@ -142,21 +139,15 @@ export const apiService = {
   },
 
   async addReview(review: Omit<Review, 'id' | 'created_at'>) {
-    try {
-      const res = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(review)
-      });
-      const data = await res.json();
-      await this.getReviews();
-      return data;
-    } catch {
-      const reviews = await this.getReviews();
-      const newReview = { ...review, id: Date.now(), created_at: new Date().toISOString() };
-      localStorage.setItem('lg_reviews', JSON.stringify([newReview, ...reviews]));
-      return newReview;
-    }
+    const res = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(review)
+    });
+    if (!res.ok) throw new Error('Failed to add review');
+    const data = await res.json();
+    await this.getReviews();
+    return data;
   },
 
   async getServices(): Promise<Service[]> {
@@ -177,23 +168,15 @@ export const apiService = {
   },
 
   async addService(service: Omit<Service, 'id'>) {
-    try {
-      const res = await fetch('/api/services', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(service)
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      await this.getServices(); // Refresh local cache
-      return data;
-    } catch {
-      const services = await this.getServices();
-      const newService = { ...service, id: Date.now() };
-      const updated = [...services, newService];
-      localStorage.setItem('lg_services', JSON.stringify(updated));
-      return newService;
-    }
+    const res = await fetch('/api/services', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...service, price: Number(service.price), duration: Number(service.duration) })
+    });
+    if (!res.ok) throw new Error('Failed to add service');
+    const data = await res.json();
+    await this.getServices(); // Refresh local cache
+    return data;
   },
 
   async deleteService(id: number) {
@@ -236,23 +219,15 @@ export const apiService = {
   },
 
   async addStylist(stylist: Omit<Stylist, 'id'>) {
-    try {
-      const res = await fetch('/api/stylists', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stylist)
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      await this.getStylists(); // Refresh local cache
-      return data;
-    } catch {
-      const stylists = await this.getStylists();
-      const newStylist = { ...stylist, id: Date.now() };
-      const updated = [...stylists, newStylist];
-      localStorage.setItem('lg_stylists', JSON.stringify(updated));
-      return newStylist;
-    }
+    const res = await fetch('/api/stylists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(stylist)
+    });
+    if (!res.ok) throw new Error('Failed to add stylist');
+    const data = await res.json();
+    await this.getStylists(); // Refresh local cache
+    return data;
   },
 
   async deleteStylist(id: number) {
@@ -280,34 +255,15 @@ export const apiService = {
   },
 
   async addBooking(booking: Omit<Booking, 'id' | 'status'>) {
-    try {
-      const res = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(booking)
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      await this.getBookings(); // Refresh local cache
-      return data;
-    } catch {
-      const bookings = await this.getBookings();
-      const services = await this.getServices();
-      const stylists = await this.getStylists();
-      
-      const service = services.find(s => s.id === Number(booking.service_id));
-      const newBooking: Booking = { 
-        ...booking, 
-        id: Date.now(), 
-        status: 'pending',
-        service_name: service?.name,
-        service_price: service?.price,
-        stylist_name: stylists.find(s => s.id === Number(booking.stylist_id))?.name
-      };
-      const updated = [...bookings, newBooking];
-      localStorage.setItem('lg_bookings', JSON.stringify(updated));
-      return newBooking;
-    }
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(booking)
+    });
+    if (!res.ok) throw new Error('Failed to add booking');
+    const data = await res.json();
+    await this.getBookings(); // Refresh local cache
+    return data;
   },
 
   async updateBookingStatus(id: number, status: string) {

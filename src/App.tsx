@@ -22,7 +22,9 @@ import {
   ArrowLeft,
   MessageSquare,
   Settings,
-  Filter
+  Filter,
+  Download,
+  Wind
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService, cn, fileToBase64, type Service, type Stylist, type Booking, type GalleryItem, type Review, type SiteContent } from './services/api';
@@ -121,7 +123,7 @@ const ReviewList = ({ reviews }: { reviews: Review[] }) => {
     </div>
   );
 };
-const Navbar = ({ isAdmin, setIsAdmin }: { isAdmin: boolean, setIsAdmin: (val: boolean) => void }) => {
+const Navbar = ({ isAdmin, setIsAdmin, onInstall, showInstall }: { isAdmin: boolean, setIsAdmin: (val: boolean) => void, onInstall: () => void, showInstall: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -135,11 +137,31 @@ const Navbar = ({ isAdmin, setIsAdmin }: { isAdmin: boolean, setIsAdmin: (val: b
     <nav className="fixed top-0 left-0 right-0 z-50 bg-luxury-cream/80 backdrop-blur-md border-b border-luxury-ink/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20 items-center">
-          <Link to="/" className="text-2xl font-serif font-bold tracking-widest text-luxury-ink">
-            LUXEGLOW
+          <Link to="/" className="flex items-center space-x-3 group">
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              <div className="absolute inset-0 bg-luxury-gold/20 rounded-full scale-0 group-hover:scale-110 transition-transform duration-500" />
+              <div className="relative grid grid-cols-2 gap-0.5 rotate-45">
+                <Wind size={16} className="text-luxury-gold -rotate-45" />
+                <Wind size={16} className="text-luxury-ink rotate-[135deg]" />
+                <Wind size={16} className="text-luxury-ink -rotate-[135deg]" />
+                <Wind size={16} className="text-luxury-gold rotate-45" />
+              </div>
+            </div>
+            <span className="text-2xl font-serif font-bold tracking-widest text-luxury-ink">
+              LUXEGLOW
+            </span>
           </Link>
           
           <div className="hidden md:flex space-x-8 items-center">
+            {showInstall && (
+              <button 
+                onClick={onInstall}
+                className="flex items-center space-x-2 text-xs uppercase tracking-widest font-bold text-luxury-gold hover:text-luxury-ink transition-colors"
+              >
+                <Download size={14} />
+                <span>Install App</span>
+              </button>
+            )}
             <Link to="/services" className="text-sm uppercase tracking-widest hover:text-luxury-gold transition-colors">Services</Link>
             <Link to="/gallery" className="text-sm uppercase tracking-widest hover:text-luxury-gold transition-colors">Gallery</Link>
             <Link to="/booking" className="bg-luxury-ink text-white px-6 py-2 rounded-full text-sm uppercase tracking-widest hover:bg-luxury-gold transition-all">Book Now</Link>
@@ -179,6 +201,15 @@ const Navbar = ({ isAdmin, setIsAdmin }: { isAdmin: boolean, setIsAdmin: (val: b
               <Link to="/services" onClick={() => setIsOpen(false)} className="block text-lg font-serif">Services</Link>
               <Link to="/gallery" onClick={() => setIsOpen(false)} className="block text-lg font-serif">Gallery</Link>
               <Link to="/booking" onClick={() => setIsOpen(false)} className="block text-lg font-serif text-luxury-gold">Book Appointment</Link>
+              {showInstall && (
+                <button 
+                  onClick={() => { onInstall(); setIsOpen(false); }}
+                  className="w-full text-left flex items-center space-x-2 text-lg font-serif text-luxury-gold"
+                >
+                  <Download size={20} />
+                  <span>Install App</span>
+                </button>
+              )}
               {isAdmin ? (
                 <>
                   <Link to="/admin" onClick={() => setIsOpen(false)} className="block text-lg font-serif text-luxury-gold">Admin Dashboard</Link>
@@ -489,6 +520,8 @@ const BookingPage = () => {
     booking_date: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -503,9 +536,17 @@ const BookingPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await apiService.addBooking(formData as any);
-    setSubmitted(true);
-    setTimeout(() => navigate('/'), 3000);
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await apiService.addBooking(formData as any);
+      setSubmitted(true);
+      setTimeout(() => navigate('/'), 3000);
+    } catch (err) {
+      setError('Failed to book appointment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -532,8 +573,13 @@ const BookingPage = () => {
         <p className="text-luxury-ink/60">Select your preferred service and stylist.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-luxury-ink/5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-luxury-ink/5">
+          {error && (
+            <div className="bg-rose-50 text-rose-500 p-4 rounded-xl text-sm font-bold">
+              {error}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-widest font-bold">Full Name</label>
             <input 
@@ -596,8 +642,16 @@ const BookingPage = () => {
           />
         </div>
 
-        <button type="submit" className="w-full bg-luxury-ink text-white py-5 rounded-xl text-sm uppercase tracking-[0.2em] font-bold hover:bg-luxury-gold transition-all shadow-lg">
-          Confirm Appointment
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="w-full bg-luxury-ink text-white py-5 rounded-xl text-sm uppercase tracking-[0.2em] font-bold hover:bg-luxury-gold transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          {isSubmitting ? (
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            'Confirm Appointment'
+          )}
         </button>
       </form>
     </div>
@@ -765,7 +819,7 @@ const AdminDashboard = ({ siteContent, setSiteContent }: { siteContent: SiteCont
   };
 
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
-  const totalRevenue = confirmedBookings.reduce((acc, b) => acc + (b.service_price || 0), 0);
+  const totalRevenue = confirmedBookings.reduce((acc, b) => acc + Number(b.service_price || 0), 0);
 
   if (loading) return <div className="pt-32 text-center">Loading dashboard...</div>;
 
@@ -1109,6 +1163,7 @@ const GalleryPage = () => {
   const [images, setImages] = useState<GalleryItem[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('All');
 
   useEffect(() => {
     Promise.all([
@@ -1121,28 +1176,60 @@ const GalleryPage = () => {
     });
   }, []);
 
-  const displayImages = images.map(i => i.image_url);
+  if (loading) return <div className="pt-32 text-center font-serif italic">Loading gallery...</div>;
 
-  if (loading) return <div className="pt-32 text-center font-serif italic">Loading portfolio...</div>;
+  const categories = ['All', ...new Set(images.map(i => i.category))];
+  const filteredImages = filter === 'All' ? images : images.filter(i => i.category === filter);
 
   return (
     <div className="pt-32 pb-20 px-4 max-w-7xl mx-auto">
-      <h2 className="text-5xl font-serif mb-12 text-center">Our Portfolio</h2>
+      <div className="text-center mb-12">
+        <h2 className="text-5xl font-serif mb-4 text-center">Our Gallery</h2>
+        <p className="text-luxury-ink/60 max-w-2xl mx-auto">A showcase of our finest beauty transformations and artistry.</p>
+      </div>
+
+      {/* Filter */}
+      <div className="mb-16 flex flex-wrap justify-center gap-3">
+        <div className="w-full text-center mb-4 flex items-center justify-center text-luxury-ink/40">
+          <Filter size={14} className="mr-2" />
+          <span className="text-[10px] uppercase tracking-widest font-bold">Filter by Category</span>
+        </div>
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setFilter(cat)}
+            className={cn(
+              "px-6 py-2 rounded-full text-[10px] uppercase tracking-widest transition-all border font-bold",
+              filter === cat 
+                ? "bg-luxury-ink text-white border-luxury-ink shadow-lg" 
+                : "bg-white text-luxury-ink border-luxury-ink/10 hover:border-luxury-gold"
+            )}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
       <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8 mb-32">
-        {displayImages.map((img, idx) => (
+        {filteredImages.map((img) => (
           <motion.div 
-            key={idx}
+            key={img.id}
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             className="relative group overflow-hidden rounded-3xl"
           >
-            <img src={img} alt="Salon work" className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
-            <div className="absolute inset-0 bg-luxury-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <Instagram className="text-white" size={32} />
+            <img src={img.image_url} alt={img.title} className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
+            <div className="absolute inset-0 bg-luxury-ink/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-6 text-center">
+              <span className="text-[10px] uppercase tracking-widest text-luxury-gold mb-2 font-bold">{img.category}</span>
+              <h3 className="text-white text-xl font-serif mb-4">{img.title}</h3>
+              <Instagram className="text-white/60" size={24} />
             </div>
           </motion.div>
         ))}
+        {filteredImages.length === 0 && (
+          <div className="col-span-full text-center py-20 text-luxury-ink/40 italic">No images found in this category.</div>
+        )}
       </div>
 
       <div className="border-t border-luxury-ink/10 pt-32">
@@ -1170,19 +1257,49 @@ const Footer = () => null;
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [siteContent, setSiteContent] = useState<SiteContent>({});
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     // Check local storage for token
     if (localStorage.getItem('adminToken')) {
       setIsAdmin(true);
     }
-    apiService.getContent().then(setSiteContent);
+    
+    const fetchData = () => {
+      apiService.getContent().then(setSiteContent).catch(console.error);
+    };
+
+    fetchData();
+
+    // Polling for data sync across devices
+    const interval = setInterval(fetchData, 30000); // Poll every 30 seconds
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+
+    return () => clearInterval(interval);
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   return (
     <Router>
       <div className="min-h-screen bg-luxury-cream selection:bg-luxury-gold selection:text-white pb-20">
-        <Navbar isAdmin={isAdmin} setIsAdmin={setIsAdmin} />
+        <Navbar 
+          isAdmin={isAdmin} 
+          setIsAdmin={setIsAdmin} 
+          onInstall={handleInstallClick}
+          showInstall={!!deferredPrompt}
+        />
         <main>
           <Routes>
             <Route path="/" element={<><Hero content={siteContent} /><Mission content={siteContent} /><ServicesPage /><GalleryPage /></>} />
