@@ -96,9 +96,16 @@ export const fileToBase64 = (file: File): Promise<string> => {
 // Service to handle API calls with LocalStorage fallback
 export const apiService = {
   async getContent(): Promise<SiteContent> {
-    const res = await fetch('/api/content', { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch content');
-    return await res.json();
+    try {
+      const res = await fetch('/api/content', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch content');
+      const data = await res.json();
+      localStorage.setItem('lg_content', JSON.stringify(data));
+      return data;
+    } catch (err) {
+      const stored = localStorage.getItem('lg_content');
+      return stored ? JSON.parse(stored) : INITIAL_CONTENT;
+    }
   },
 
   async updateContent(content: SiteContent) {
@@ -111,12 +118,23 @@ export const apiService = {
   },
 
   async getReviews(type?: string, target_id?: number): Promise<Review[]> {
-    const params = new URLSearchParams();
-    if (type) params.append('type', type);
-    if (target_id) params.append('target_id', target_id.toString());
-    const res = await fetch(`/api/reviews?${params}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch reviews');
-    return await res.json();
+    try {
+      const params = new URLSearchParams();
+      if (type) params.append('type', type);
+      if (target_id) params.append('target_id', target_id.toString());
+      const res = await fetch(`/api/reviews?${params}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch reviews');
+      const data = await res.json();
+      localStorage.setItem('lg_reviews', JSON.stringify(data));
+      return data;
+    } catch (err) {
+      const stored = localStorage.getItem('lg_reviews');
+      const reviews: Review[] = stored ? JSON.parse(stored) : [];
+      if (type) {
+        return reviews.filter(r => r.type === type && (target_id ? r.target_id === target_id : true));
+      }
+      return reviews;
+    }
   },
 
   async addReview(review: Omit<Review, 'id' | 'created_at'>) {
@@ -130,9 +148,20 @@ export const apiService = {
   },
 
   async getServices(): Promise<Service[]> {
-    const res = await fetch('/api/services', { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch services');
-    return await res.json();
+    try {
+      const res = await fetch('/api/services', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch services');
+      const data = await res.json();
+      localStorage.setItem('lg_services', JSON.stringify(data));
+      return data;
+    } catch (err) {
+      const stored = localStorage.getItem('lg_services');
+      if (!stored) {
+        localStorage.setItem('lg_services', JSON.stringify(INITIAL_SERVICES));
+        return INITIAL_SERVICES;
+      }
+      return JSON.parse(stored);
+    }
   },
 
   async addService(service: Omit<Service, 'id'>) {
@@ -151,15 +180,31 @@ export const apiService = {
   },
 
   async getStylists(): Promise<Stylist[]> {
-    const res = await fetch('/api/stylists', { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch stylists');
-    return await res.json();
+    try {
+      const res = await fetch('/api/stylists', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch stylists');
+      const data = await res.json();
+      localStorage.setItem('lg_stylists', JSON.stringify(data));
+      return data;
+    } catch (err) {
+      const stored = localStorage.getItem('lg_stylists');
+      if (!stored) {
+        localStorage.setItem('lg_stylists', JSON.stringify(INITIAL_STYLISTS));
+        return INITIAL_STYLISTS;
+      }
+      return JSON.parse(stored);
+    }
   },
 
   async getStylistById(id: number): Promise<Stylist | undefined> {
-    const res = await fetch(`/api/stylists/${id}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch stylist');
-    return await res.json();
+    try {
+      const res = await fetch(`/api/stylists/${id}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch stylist');
+      return await res.json();
+    } catch (err) {
+      const stylists = await this.getStylists();
+      return stylists.find(s => s.id === id);
+    }
   },
 
   async addStylist(stylist: Omit<Stylist, 'id'>) {
@@ -178,9 +223,16 @@ export const apiService = {
   },
 
   async getBookings(): Promise<Booking[]> {
-    const res = await fetch('/api/bookings', { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch bookings');
-    return await res.json();
+    try {
+      const res = await fetch('/api/bookings', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch bookings');
+      const data = await res.json();
+      localStorage.setItem('lg_bookings', JSON.stringify(data));
+      return data;
+    } catch (err) {
+      const stored = localStorage.getItem('lg_bookings');
+      return stored ? JSON.parse(stored) : [];
+    }
   },
 
   async addBooking(booking: Omit<Booking, 'id' | 'status'>) {
@@ -203,9 +255,20 @@ export const apiService = {
   },
 
   async getGallery(): Promise<GalleryItem[]> {
-    const res = await fetch('/api/gallery', { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch gallery');
-    return await res.json();
+    try {
+      const res = await fetch('/api/gallery', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch gallery');
+      const data = await res.json();
+      localStorage.setItem('lg_gallery', JSON.stringify(data));
+      return data;
+    } catch (err) {
+      const stored = localStorage.getItem('lg_gallery');
+      if (!stored) {
+        localStorage.setItem('lg_gallery', JSON.stringify(INITIAL_GALLERY));
+        return INITIAL_GALLERY;
+      }
+      return JSON.parse(stored);
+    }
   },
 
   async addGallery(item: Omit<GalleryItem, 'id'>) {
