@@ -1,0 +1,5 @@
+{
+  "name": "LuxeGlow Salon",
+  "description": "Premium salon management and booking PWA with real-time scheduling, stylist profiles, and admin dashboard.",
+  "requestFramePermissions": ["notifications"]
+}
