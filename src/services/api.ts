@@ -183,6 +183,7 @@ export const apiService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(service)
       });
+      if (!res.ok) throw new Error();
       const data = await res.json();
       await this.getServices(); // Refresh local cache
       return data;
@@ -197,7 +198,8 @@ export const apiService = {
 
   async deleteService(id: number) {
     try {
-      await fetch(`/api/services/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
       await this.getServices(); // Refresh local cache
     } catch {
       const services = await this.getServices();
@@ -240,6 +242,7 @@ export const apiService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(stylist)
       });
+      if (!res.ok) throw new Error();
       const data = await res.json();
       await this.getStylists(); // Refresh local cache
       return data;
@@ -254,7 +257,8 @@ export const apiService = {
 
   async deleteStylist(id: number) {
     try {
-      await fetch(`/api/stylists/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/stylists/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
       await this.getStylists(); // Refresh local cache
     } catch {
       const stylists = await this.getStylists();
@@ -282,6 +286,7 @@ export const apiService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(booking)
       });
+      if (!res.ok) throw new Error();
       const data = await res.json();
       await this.getBookings(); // Refresh local cache
       return data;
@@ -290,11 +295,13 @@ export const apiService = {
       const services = await this.getServices();
       const stylists = await this.getStylists();
       
+      const service = services.find(s => s.id === Number(booking.service_id));
       const newBooking: Booking = { 
         ...booking, 
         id: Date.now(), 
         status: 'pending',
-        service_name: services.find(s => s.id === Number(booking.service_id))?.name,
+        service_name: service?.name,
+        service_price: service?.price,
         stylist_name: stylists.find(s => s.id === Number(booking.stylist_id))?.name
       };
       const updated = [...bookings, newBooking];
@@ -305,11 +312,12 @@ export const apiService = {
 
   async updateBookingStatus(id: number, status: string) {
     try {
-      await fetch(`/api/bookings/${id}`, {
+      const res = await fetch(`/api/bookings/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
+      if (!res.ok) throw new Error();
       await this.getBookings(); // Refresh local cache
     } catch {
       const bookings = await this.getBookings();
@@ -342,6 +350,7 @@ export const apiService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item)
       });
+      if (!res.ok) throw new Error();
       const data = await res.json();
       await this.getGallery(); // Refresh local cache
       return data;
@@ -356,7 +365,8 @@ export const apiService = {
 
   async deleteGallery(id: number) {
     try {
-      await fetch(`/api/gallery/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/gallery/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
       await this.getGallery(); // Refresh local cache
     } catch {
       const items = await this.getGallery();

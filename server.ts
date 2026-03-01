@@ -155,22 +155,34 @@ async function startServer() {
   });
 
   app.post('/api/services', (req, res) => {
-    const { name, description, price, duration, category, image_url } = req.body;
-    const info = db.prepare('INSERT INTO services (name, description, price, duration, category, image_url) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(name, description, price, duration, category, image_url);
-    res.json({ id: info.lastInsertRowid });
+    try {
+      const { name, description, price, duration, category, image_url } = req.body;
+      const info = db.prepare('INSERT INTO services (name, description, price, duration, category, image_url) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(name, description, price, duration, category, image_url);
+      res.json({ id: info.lastInsertRowid });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to add service' });
+    }
   });
 
   app.put('/api/services/:id', (req, res) => {
-    const { name, description, price, duration, category, image_url } = req.body;
-    db.prepare('UPDATE services SET name = ?, description = ?, price = ?, duration = ?, category = ?, image_url = ? WHERE id = ?')
-      .run(name, description, price, duration, category, image_url, req.params.id);
-    res.json({ success: true });
+    try {
+      const { name, description, price, duration, category, image_url } = req.body;
+      db.prepare('UPDATE services SET name = ?, description = ?, price = ?, duration = ?, category = ?, image_url = ? WHERE id = ?')
+        .run(name, description, price, duration, category, image_url, req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update service' });
+    }
   });
 
   app.delete('/api/services/:id', (req, res) => {
-    db.prepare('DELETE FROM services WHERE id = ?').run(req.params.id);
-    res.json({ success: true });
+    try {
+      db.prepare('DELETE FROM services WHERE id = ?').run(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to delete service' });
+    }
   });
 
   // Stylists
@@ -186,22 +198,34 @@ async function startServer() {
   });
 
   app.post('/api/stylists', (req, res) => {
-    const { name, bio, specialty, image_url } = req.body;
-    const info = db.prepare('INSERT INTO stylists (name, bio, specialty, image_url) VALUES (?, ?, ?, ?)')
-      .run(name, bio, specialty, image_url);
-    res.json({ id: info.lastInsertRowid });
+    try {
+      const { name, bio, specialty, image_url } = req.body;
+      const info = db.prepare('INSERT INTO stylists (name, bio, specialty, image_url) VALUES (?, ?, ?, ?)')
+        .run(name, bio, specialty, image_url);
+      res.json({ id: info.lastInsertRowid });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to add stylist' });
+    }
   });
 
   app.put('/api/stylists/:id', (req, res) => {
-    const { name, bio, specialty, image_url } = req.body;
-    db.prepare('UPDATE stylists SET name = ?, bio = ?, specialty = ?, image_url = ? WHERE id = ?')
-      .run(name, bio, specialty, image_url, req.params.id);
-    res.json({ success: true });
+    try {
+      const { name, bio, specialty, image_url } = req.body;
+      db.prepare('UPDATE stylists SET name = ?, bio = ?, specialty = ?, image_url = ? WHERE id = ?')
+        .run(name, bio, specialty, image_url, req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update stylist' });
+    }
   });
 
   app.delete('/api/stylists/:id', (req, res) => {
-    db.prepare('DELETE FROM stylists WHERE id = ?').run(req.params.id);
-    res.json({ success: true });
+    try {
+      db.prepare('DELETE FROM stylists WHERE id = ?').run(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to delete stylist' });
+    }
   });
 
   // Bookings
@@ -217,18 +241,26 @@ async function startServer() {
   });
 
   app.post('/api/bookings', (req, res) => {
-    const { client_name, client_email, client_phone, service_id, stylist_id, booking_date } = req.body;
-    const info = db.prepare(`
-      INSERT INTO bookings (client_name, client_email, client_phone, service_id, stylist_id, booking_date)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(client_name, client_email, client_phone, service_id, stylist_id, booking_date);
-    res.json({ id: info.lastInsertRowid });
+    try {
+      const { client_name, client_email, client_phone, service_id, stylist_id, booking_date } = req.body;
+      const info = db.prepare(`
+        INSERT INTO bookings (client_name, client_email, client_phone, service_id, stylist_id, booking_date)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(client_name, client_email, client_phone, service_id, stylist_id, booking_date);
+      res.json({ id: info.lastInsertRowid });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to add booking' });
+    }
   });
 
   app.patch('/api/bookings/:id', (req, res) => {
-    const { status } = req.body;
-    db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
-    res.json({ success: true });
+    try {
+      const { status } = req.body;
+      db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update booking' });
+    }
   });
 
   // Gallery
@@ -238,15 +270,23 @@ async function startServer() {
   });
 
   app.post('/api/gallery', (req, res) => {
-    const { title, image_url, category } = req.body;
-    const info = db.prepare('INSERT INTO gallery (title, image_url, category) VALUES (?, ?, ?)')
-      .run(title, image_url, category);
-    res.json({ id: info.lastInsertRowid });
+    try {
+      const { title, image_url, category } = req.body;
+      const info = db.prepare('INSERT INTO gallery (title, image_url, category) VALUES (?, ?, ?)')
+        .run(title, image_url, category);
+      res.json({ id: info.lastInsertRowid });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to add gallery item' });
+    }
   });
 
   app.delete('/api/gallery/:id', (req, res) => {
-    db.prepare('DELETE FROM gallery WHERE id = ?').run(req.params.id);
-    res.json({ success: true });
+    try {
+      db.prepare('DELETE FROM gallery WHERE id = ?').run(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to delete gallery item' });
+    }
   });
 
   // Admin Login
