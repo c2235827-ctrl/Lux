@@ -27,6 +27,7 @@ import {
   Wind
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { apiService, cn, fileToBase64, type Service, type Stylist, type Booking, type GalleryItem, type Review, type SiteContent } from './services/api';
 
 // Components
@@ -1311,6 +1312,7 @@ export default function App() {
             <Route path="/admin" element={isAdmin ? <AdminDashboard siteContent={siteContent} setSiteContent={setSiteContent} /> : <AdminLogin setIsAdmin={setIsAdmin} />} />
           </Routes>
         </main>
+        <SpeedInsights />
       </div>
     </Router>
   );
