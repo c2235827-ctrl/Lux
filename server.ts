@@ -3,6 +3,8 @@ import { createServer as createViteServer } from 'vite';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Server } from 'socket.io';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,7 +101,17 @@ if (contentCount.count === 0) {
 
 async function startServer() {
   const app = express();
+  const server = http.createServer(app);
+  const io = new Server(server, {
+    cors: { origin: '*' }
+  });
+
   app.use(express.json());
+
+  // Broadcast helper
+  const broadcastUpdate = (type: string) => {
+    io.emit('data_updated', { type });
+  };
 
   // Site Content
   app.get('/api/content', (req, res) => {
@@ -120,6 +132,7 @@ async function startServer() {
       }
     });
     transaction(content);
+    broadcastUpdate('content');
     res.json({ success: true });
   });
 
@@ -145,6 +158,7 @@ async function startServer() {
     const { type, target_id, client_name, rating, comment } = req.body;
     const info = db.prepare('INSERT INTO reviews (type, target_id, client_name, rating, comment) VALUES (?, ?, ?, ?, ?)')
       .run(type, target_id, client_name, rating, comment);
+    broadcastUpdate('reviews');
     res.json({ id: info.lastInsertRowid });
   });
 
@@ -159,6 +173,7 @@ async function startServer() {
       const { name, description, price, duration, category, image_url } = req.body;
       const info = db.prepare('INSERT INTO services (name, description, price, duration, category, image_url) VALUES (?, ?, ?, ?, ?, ?)')
         .run(name, description, price, duration, category, image_url);
+      broadcastUpdate('services');
       res.json({ id: info.lastInsertRowid });
     } catch (err) {
       res.status(500).json({ error: 'Failed to add service' });
@@ -170,6 +185,7 @@ async function startServer() {
       const { name, description, price, duration, category, image_url } = req.body;
       db.prepare('UPDATE services SET name = ?, description = ?, price = ?, duration = ?, category = ?, image_url = ? WHERE id = ?')
         .run(name, description, price, duration, category, image_url, req.params.id);
+      broadcastUpdate('services');
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update service' });
@@ -179,6 +195,7 @@ async function startServer() {
   app.delete('/api/services/:id', (req, res) => {
     try {
       db.prepare('DELETE FROM services WHERE id = ?').run(req.params.id);
+      broadcastUpdate('services');
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to delete service' });
@@ -202,6 +219,7 @@ async function startServer() {
       const { name, bio, specialty, image_url } = req.body;
       const info = db.prepare('INSERT INTO stylists (name, bio, specialty, image_url) VALUES (?, ?, ?, ?)')
         .run(name, bio, specialty, image_url);
+      broadcastUpdate('stylists');
       res.json({ id: info.lastInsertRowid });
     } catch (err) {
       res.status(500).json({ error: 'Failed to add stylist' });
@@ -213,6 +231,7 @@ async function startServer() {
       const { name, bio, specialty, image_url } = req.body;
       db.prepare('UPDATE stylists SET name = ?, bio = ?, specialty = ?, image_url = ? WHERE id = ?')
         .run(name, bio, specialty, image_url, req.params.id);
+      broadcastUpdate('stylists');
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update stylist' });
@@ -222,6 +241,7 @@ async function startServer() {
   app.delete('/api/stylists/:id', (req, res) => {
     try {
       db.prepare('DELETE FROM stylists WHERE id = ?').run(req.params.id);
+      broadcastUpdate('stylists');
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to delete stylist' });
@@ -247,6 +267,7 @@ async function startServer() {
         INSERT INTO bookings (client_name, client_email, client_phone, service_id, stylist_id, booking_date)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(client_name, client_email, client_phone, service_id, stylist_id, booking_date);
+      broadcastUpdate('bookings');
       res.json({ id: info.lastInsertRowid });
     } catch (err) {
       res.status(500).json({ error: 'Failed to add booking' });
@@ -257,6 +278,7 @@ async function startServer() {
     try {
       const { status } = req.body;
       db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
+      broadcastUpdate('bookings');
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update booking' });
@@ -274,6 +296,7 @@ async function startServer() {
       const { title, image_url, category } = req.body;
       const info = db.prepare('INSERT INTO gallery (title, image_url, category) VALUES (?, ?, ?)')
         .run(title, image_url, category);
+      broadcastUpdate('gallery');
       res.json({ id: info.lastInsertRowid });
     } catch (err) {
       res.status(500).json({ error: 'Failed to add gallery item' });
@@ -283,6 +306,7 @@ async function startServer() {
   app.delete('/api/gallery/:id', (req, res) => {
     try {
       db.prepare('DELETE FROM gallery WHERE id = ?').run(req.params.id);
+      broadcastUpdate('gallery');
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to delete gallery item' });
@@ -312,7 +336,7 @@ async function startServer() {
   }
 
   const PORT = 3000;
-  app.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

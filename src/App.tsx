@@ -27,8 +27,11 @@ import {
   Wind
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import { apiService, cn, fileToBase64, type Service, type Stylist, type Booking, type GalleryItem, type Review, type SiteContent } from './services/api';
+import { io } from 'socket.io-client';
+
+// Initialize socket
+const socket = io();
 
 // Components
 const ReviewForm = ({ type, targetId, onReviewAdded }: { type: 'stylist' | 'service' | 'experience' | 'general', targetId?: number, onReviewAdded: () => void }) => {
@@ -295,7 +298,7 @@ const ServicesPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
 
-  useEffect(() => {
+  const fetchData = () => {
     Promise.all([
       apiService.getServices(),
       apiService.getStylists()
@@ -304,6 +307,21 @@ const ServicesPage = () => {
       setStylists(stData);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    const handleUpdate = (data: { type: string }) => {
+      if (data.type === 'services' || data.type === 'stylists') {
+        fetchData();
+      }
+    };
+    
+    socket.on('data_updated', handleUpdate);
+    return () => {
+      socket.off('data_updated', handleUpdate);
+    };
   }, []);
 
   const specialties = ['All', ...new Set(stylists.map(s => s.specialty))];
@@ -442,6 +460,17 @@ const StylistProfile = () => {
 
   useEffect(() => {
     fetchData();
+
+    const handleUpdate = (data: { type: string }) => {
+      if (data.type === 'stylists' || data.type === 'services' || data.type === 'reviews') {
+        fetchData();
+      }
+    };
+    
+    socket.on('data_updated', handleUpdate);
+    return () => {
+      socket.off('data_updated', handleUpdate);
+    };
   }, [id]);
 
   if (loading) return <div className="pt-32 text-center font-serif italic">Loading profile...</div>;
@@ -525,7 +554,7 @@ const BookingPage = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const fetchData = () => {
     Promise.all([
       apiService.getServices(),
       apiService.getStylists()
@@ -533,6 +562,21 @@ const BookingPage = () => {
       setServices(sData);
       setStylists(stData);
     });
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    const handleUpdate = (data: { type: string }) => {
+      if (data.type === 'services' || data.type === 'stylists') {
+        fetchData();
+      }
+    };
+    
+    socket.on('data_updated', handleUpdate);
+    return () => {
+      socket.off('data_updated', handleUpdate);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -751,6 +795,17 @@ const AdminDashboard = ({ siteContent, setSiteContent }: { siteContent: SiteCont
 
   useEffect(() => {
     fetchData();
+
+    // Real-time synchronization for admin dashboard
+    const handleUpdate = (data: { type: string }) => {
+      fetchData();
+    };
+    
+    socket.on('data_updated', handleUpdate);
+
+    return () => {
+      socket.off('data_updated', handleUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -1166,7 +1221,7 @@ const GalleryPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
 
-  useEffect(() => {
+  const fetchData = () => {
     Promise.all([
       apiService.getGallery(),
       apiService.getReviews('general')
@@ -1175,6 +1230,21 @@ const GalleryPage = () => {
       setReviews(rData);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    const handleUpdate = (data: { type: string }) => {
+      if (data.type === 'gallery' || data.type === 'reviews') {
+        fetchData();
+      }
+    };
+    
+    socket.on('data_updated', handleUpdate);
+    return () => {
+      socket.off('data_updated', handleUpdate);
+    };
   }, []);
 
   if (loading) return <div className="pt-32 text-center font-serif italic">Loading gallery...</div>;
@@ -1272,7 +1342,14 @@ export default function App() {
 
     fetchData();
 
-    // Polling for data sync across devices
+    // Real-time synchronization
+    socket.on('data_updated', (data) => {
+      if (data.type === 'content') {
+        fetchData();
+      }
+    });
+
+    // Polling for data sync across devices (fallback)
     const interval = setInterval(fetchData, 30000); // Poll every 30 seconds
 
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -1280,7 +1357,10 @@ export default function App() {
       setDeferredPrompt(e);
     });
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      socket.off('data_updated');
+    };
   }, []);
 
   const handleInstallClick = async () => {
@@ -1312,7 +1392,6 @@ export default function App() {
             <Route path="/admin" element={isAdmin ? <AdminDashboard siteContent={siteContent} setSiteContent={setSiteContent} /> : <AdminLogin setIsAdmin={setIsAdmin} />} />
           </Routes>
         </main>
-        <SpeedInsights />
       </div>
     </Router>
   );
